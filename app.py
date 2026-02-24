@@ -7,7 +7,7 @@ import seaborn as sns
 import plotly.express as px
 
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import make_pipeline
@@ -52,28 +52,43 @@ model_option = st.sidebar.selectbox(
     ["Logistic Regression", "Random Forest"]
 )
 
+# Polynomial feature toggle for LR
+use_poly = False
+if model_option == "Logistic Regression":
+    use_poly = st.sidebar.checkbox("Use Polynomial Features (interactions) for LR", value=False)
+
 # ---------------------------
 # Train & Cache Model
 # ---------------------------
 @st.cache_resource
-def get_trained_model(model_option):
+def get_trained_model(model_option, use_poly=False):
     X = df[features]
     y = df["Churn"]
+    
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.25, random_state=42, stratify=y
     )
-
+    
     scaler = StandardScaler()
     
     if model_option == "Logistic Regression":
-        pipeline = make_pipeline(scaler, LogisticRegression(max_iter=1000))
-    else:
+        if use_poly:
+            poly = PolynomialFeatures(degree=2, interaction_only=True, include_bias=False)
+            X_train_poly = poly.fit_transform(X_train)
+            X_test_poly = poly.transform(X_test)
+            pipeline = make_pipeline(scaler, LogisticRegression(max_iter=2000, class_weight="balanced"))
+            pipeline.fit(X_train_poly, y_train)
+            return pipeline, X_train_poly, X_test_poly, y_train, y_test, scaler, poly
+        else:
+            pipeline = make_pipeline(scaler, LogisticRegression(max_iter=2000, class_weight="balanced"))
+            pipeline.fit(X_train, y_train)
+            return pipeline, X_train, X_test, y_train, y_test, scaler, None
+    else:  # Random Forest
         pipeline = make_pipeline(RandomForestClassifier(n_estimators=200, random_state=42))
-    
-    pipeline.fit(X_train, y_train)
-    return pipeline, X_train, X_test, y_train, y_test, scaler
+        pipeline.fit(X_train, y_train)
+        return pipeline, X_train, X_test, y_train, y_test, scaler, None
 
-model, X_train, X_test, y_train, y_test, scaler = get_trained_model(model_option)
+model, X_train, X_test, y_train, y_test, scaler, poly = get_trained_model(model_option, use_poly)
 
 # ---------------------------
 # ABOUT PAGE
@@ -124,7 +139,7 @@ elif page == "EDA":
     st.subheader("Monthly Charges vs Churn")
     fig3 = px.box(df, x="Churn", y="MonthlyCharge", color="Churn",
                   title="Monthly Charge by Churn")
-    st.plotly_chart(fig3, use_container_width=True)
+    st.plotly_chart(fig3)
     
     st.subheader("Correlation Heatmap")
     corr = df[features + ["Churn"]].corr()
@@ -140,8 +155,13 @@ elif page == "Modeling":
     
     # Predictions
     if model_option == "Logistic Regression":
-        X_test_scaled = scaler.transform(X_test)
-        y_pred_prob = model.predict_proba(X_test_scaled)[:,1]
+        if use_poly and poly:
+            X_test_scaled = scaler.transform(X_test)
+            X_test_scaled = poly.transform(X_test_scaled)
+            y_pred_prob = model.predict_proba(X_test_scaled)[:,1]
+        else:
+            X_test_scaled = scaler.transform(X_test)
+            y_pred_prob = model.predict_proba(X_test_scaled)[:,1]
     else:
         y_pred_prob = model.predict_proba(X_test)[:,1]
     
@@ -190,8 +210,11 @@ elif page == "Churn Prediction":
     
     if st.button("Predict Churn"):
         input_df = pd.DataFrame([input_data])
+        
         if model_option == "Logistic Regression":
             input_scaled = scaler.transform(input_df)
+            if use_poly and poly:
+                input_scaled = poly.transform(input_scaled)
             prob = model.predict_proba(input_scaled)[:,1][0]
         else:
             prob = model.predict_proba(input_df)[:,1][0]
