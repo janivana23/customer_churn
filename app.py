@@ -10,6 +10,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.pipeline import make_pipeline
 from sklearn.metrics import roc_auc_score, confusion_matrix, ConfusionMatrixDisplay
 
 import shap
@@ -24,15 +25,6 @@ st.set_page_config(
 )
 
 # ---------------------------
-# Sidebar Navigation
-# ---------------------------
-st.sidebar.title("Navigation")
-page = st.sidebar.radio(
-    "Go to:",
-    ["About", "Dataset Overview", "EDA", "Modeling", "Churn Prediction"]
-)
-
-# ---------------------------
 # Load Dataset
 # ---------------------------
 @st.cache_data
@@ -44,6 +36,44 @@ df = load_data()
 features = ["AccountWeeks","ContractRenewal","DataPlan","DataUsage",
             "CustServCalls","DayMins","DayCalls","MonthlyCharge",
             "OverageFee","RoamMins"]
+
+# ---------------------------
+# Sidebar Navigation & Model Selection
+# ---------------------------
+st.sidebar.title("Navigation")
+page = st.sidebar.radio(
+    "Go to:",
+    ["About", "Dataset Overview", "EDA", "Modeling", "Churn Prediction"]
+)
+
+# Global model selection
+model_option = st.sidebar.selectbox(
+    "Select Model for Prediction",
+    ["Logistic Regression", "Random Forest"]
+)
+
+# ---------------------------
+# Train & Cache Model
+# ---------------------------
+@st.cache_resource
+def get_trained_model(model_option):
+    X = df[features]
+    y = df["Churn"]
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.25, random_state=42, stratify=y
+    )
+
+    scaler = StandardScaler()
+    
+    if model_option == "Logistic Regression":
+        pipeline = make_pipeline(scaler, LogisticRegression(max_iter=1000))
+    else:
+        pipeline = make_pipeline(RandomForestClassifier(n_estimators=200, random_state=42))
+    
+    pipeline.fit(X_train, y_train)
+    return pipeline, X_train, X_test, y_train, y_test, scaler
+
+model, X_train, X_test, y_train, y_test, scaler = get_trained_model(model_option)
 
 # ---------------------------
 # ABOUT PAGE
@@ -108,28 +138,11 @@ elif page == "EDA":
 elif page == "Modeling":
     st.title("🤖 Model Training & Evaluation")
     
-    # Model selection
-    model_option = st.selectbox("Select Model", ["Logistic Regression", "Random Forest"])
-    
-    # Train-test split
-    X = df[features]
-    y = df["Churn"]
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.25, random_state=42, stratify=y
-    )
-    
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_test_scaled = scaler.transform(X_test)
-    
-    # Model training
+    # Predictions
     if model_option == "Logistic Regression":
-        model = LogisticRegression(max_iter=1000)
-        model.fit(X_train_scaled, y_train)
+        X_test_scaled = scaler.transform(X_test)
         y_pred_prob = model.predict_proba(X_test_scaled)[:,1]
     else:
-        model = RandomForestClassifier(n_estimators=200, random_state=42)
-        model.fit(X_train, y_train)
         y_pred_prob = model.predict_proba(X_test)[:,1]
     
     roc_auc = roc_auc_score(y_test, y_pred_prob)
@@ -143,6 +156,16 @@ elif page == "Modeling":
     disp = ConfusionMatrixDisplay(confusion_matrix=cm)
     disp.plot(ax=ax_cm)
     st.pyplot(fig_cm)
+    
+    # Feature importance for Random Forest
+    if model_option == "Random Forest":
+        st.subheader("Feature Importance")
+        rf_model = model.named_steps["randomforestclassifier"]
+        importance = pd.DataFrame({
+            "Feature": features,
+            "Importance": rf_model.feature_importances_
+        }).sort_values(by="Importance", ascending=False)
+        st.bar_chart(importance.set_index("Feature"))
 
 # ---------------------------
 # CHURN PREDICTION PAGE
@@ -186,10 +209,8 @@ elif page == "Churn Prediction":
         
         # SHAP explanation (only for Random Forest)
         if model_option == "Random Forest":
-            explainer = shap.TreeExplainer(model)
+            explainer = shap.TreeExplainer(model.named_steps["randomforestclassifier"])
             shap_values = explainer.shap_values(input_df)
             st.subheader("Feature Contributions (SHAP Values)")
             shap.initjs()
-            st_shap = st.pyplot(shap.force_plot(
-                explainer.expected_value[1], shap_values[1], input_df, matplotlib=True
-            ))
+            shap.force_plot(explainer.expected_value[1], shap_values[1], input_df, matplotlib=True)
