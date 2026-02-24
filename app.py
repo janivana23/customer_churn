@@ -13,8 +13,6 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import roc_auc_score, confusion_matrix, ConfusionMatrixDisplay
 
-import shap
-
 # ---------------------------
 # Page Configuration
 # ---------------------------
@@ -107,9 +105,7 @@ if page == "About":
     - Visualize churn patterns interactively
     - Train and evaluate multiple ML models
     - Predict churn for individual customers
-    - AI-powered feature explanations using SHAP
-
-    Navigate using the sidebar to explore Dataset, EDA, Modeling, and Churn Prediction.
+    - AI-powered what-if scenarios for churn reduction
     """)
 
 # ---------------------------
@@ -180,7 +176,7 @@ elif page == "Modeling":
         st.bar_chart(importance.set_index("Feature"))
 
 # ---------------------------
-# CHURN PREDICTION PAGE (Live Simulator + SHAP)
+# CHURN PREDICTION PAGE (Live Simulator + What-If AI)
 # ---------------------------
 elif page == "Churn Prediction":
     st.title("📌 Predict Churn for Individual Customers (Live Simulator)")
@@ -216,30 +212,31 @@ elif page == "Churn Prediction":
         st.success("Churn Risk Level: Low")
 
     # ---------------------------
-    # SHAP Explanation (Random Forest only)
+    # AI What-If Recommendations
     # ---------------------------
-    if model_option == "Random Forest":
-        st.subheader("🔍 Feature Contributions (SHAP Values)")
+    st.subheader("🤖 AI What-If Recommendations")
+    st.markdown("""
+    This simple AI engine suggests **which features to adjust** to reduce churn probability.
+    """)
 
-        rf_model = model.named_steps["rf"]
-        explainer = shap.TreeExplainer(rf_model)
-        shap_values = explainer(input_df)
+    suggestions = []
 
-        # Flatten for class 1 (churn)
-        if shap_values.values.ndim == 3:
-            shap_vals_row = shap_values.values[0,1,:]
-        else:
-            shap_vals_row = shap_values.values[0]
+    # Example rules-based AI: adjust features based on general churn trends
+    if input_data["CustServCalls"] > 2:
+        suggestions.append("- Reduce customer service calls or resolve issues promptly")
+    if input_data["ContractRenewal"] == 0:
+        suggestions.append("- Encourage contract renewal to increase retention")
+    if input_data["MonthlyCharge"] > 70:
+        suggestions.append("- Consider offering discounts or plan optimization")
+    if input_data["OverageFee"] > 20:
+        suggestions.append("- Monitor and reduce overage fees")
+    if input_data["DataUsage"] < 5:
+        suggestions.append("- Encourage higher data plan engagement")
+    if input_data["RoamMins"] < 10:
+        suggestions.append("- Provide roaming incentives to increase value perception")
 
-        # Safety: make sure lengths match
-        feature_names = input_df.columns.tolist()
-        if len(shap_vals_row) != len(feature_names):
-            shap_vals_row = shap_vals_row[:len(feature_names)]
-
-        # SHAP DataFrame
-        shap_df = pd.DataFrame({
-            "Feature": feature_names,
-            "SHAP Value": shap_vals_row
-        }).sort_values(by="SHAP Value", key=abs, ascending=False)
-
-        st.bar_chart(shap_df.set_index("Feature"))
+    if suggestions:
+        for s in suggestions:
+            st.info(s)
+    else:
+        st.success("Customer attributes look good! Low churn risk factors detected.")
