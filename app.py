@@ -14,6 +14,13 @@ from sklearn.pipeline import Pipeline
 from sklearn.metrics import roc_auc_score, confusion_matrix, ConfusionMatrixDisplay
 
 import shap
+# Helper to render SHAP JS plots in Streamlit
+import streamlit.components.v1 as components
+
+def st_shap(plot, height=None):
+    """Renders a SHAP plot in Streamlit."""
+    shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
+    components.html(shap_html, height=height or 400)
 
 # ---------------------------
 # Page Configuration
@@ -214,24 +221,35 @@ elif page == "Churn Prediction":
         st.warning("Churn Risk Level: Medium")
     else:
         st.success("Churn Risk Level: Low")
-# SHAP explanation for Random Forest
-if model_option == "Random Forest":
-    explainer = shap.TreeExplainer(model.named_steps["rf"])
-    shap_values = explainer.shap_values(input_df)
+    
+    # SHAP explanation for Random Forest
+    if model_option == "Random Forest":
+        explainer = shap.TreeExplainer(model.named_steps["rf"])
+        shap_values = explainer(input_df)
 
-    st.subheader("Feature Contributions (SHAP Values)")
-    shap.initjs()
+        st.subheader("Feature Contributions (SHAP Values)")
 
-    # Handle both list or array return
-    if isinstance(shap_values, list) and len(shap_values) == 2:
-        # Binary classification
-        shap_to_plot = shap_values[1]
-        expected_value = explainer.expected_value[1]
-    else:
-        shap_to_plot = shap_values
-        expected_value = explainer.expected_value
+        # Use waterfall plot for single prediction
+        st_shap(shap.plots.waterfall(shap_values[0]))
+  
+    # # SHAP explanation for Random Forestå
+    # if model_option == "Random Forest":
+        explainer = shap.TreeExplainer(model.named_steps["rf"])
+        shap_values = explainer.shap_values(input_df)
 
-    # Force plot with matplotlib=True
-    st.pyplot(
-        shap.force_plot(expected_value, shap_to_plot, input_df, matplotlib=True)
-    )
+        st.subheader("Feature Contributions (SHAP Values)")
+        shap.initjs()
+
+        # Handle both list or array return
+        if isinstance(shap_values, list) and len(shap_values) == 2:
+            # Binary classification
+            shap_to_plot = shap_values[1]
+            expected_value = explainer.expected_value[1]
+        else:
+            shap_to_plot = shap_values
+            expected_value = explainer.expected_value
+
+        # Force plot with matplotlib=True
+        st.pyplot(
+            shap.force_plot(expected_value, shap_to_plot, input_df, matplotlib=True)
+        )
