@@ -211,32 +211,60 @@ elif page == "Churn Prediction":
     else:
         st.success("Churn Risk Level: Low")
 
+        
     # ---------------------------
-    # AI What-If Recommendations
+    # AI What-If Recommendations (Enhanced)
     # ---------------------------
-    st.subheader("🤖 AI What-If Recommendations")
+    st.subheader("🤖 AI What-If Scenario")
     st.markdown("""
-    This simple AI engine suggests **which features to adjust** to reduce churn probability.
+    This AI feature **simulates small adjustments** in customer attributes to reduce churn probability.
+    It recommends practical changes that could move the customer into a lower-risk category.
     """)
 
-    suggestions = []
+    # Function to simulate feature tweaks
+    def suggest_tweaks(model, input_df, features, target_prob=0.4, step=0.05):
+        """Suggest minimal feature changes to reduce churn probability below target_prob."""
+        current_df = input_df.copy()
+        prob = model.predict_proba(current_df)[:,1][0]
+        tweaks = []
 
-    # Example rules-based AI: adjust features based on general churn trends
-    if input_data["CustServCalls"] > 2:
-        suggestions.append("- Reduce customer service calls or resolve issues promptly")
-    if input_data["ContractRenewal"] == 0:
-        suggestions.append("- Encourage contract renewal to increase retention")
-    if input_data["MonthlyCharge"] > 70:
-        suggestions.append("- Consider offering discounts or plan optimization")
-    if input_data["OverageFee"] > 20:
-        suggestions.append("- Monitor and reduce overage fees")
-    if input_data["DataUsage"] < 5:
-        suggestions.append("- Encourage higher data plan engagement")
-    if input_data["RoamMins"] < 10:
-        suggestions.append("- Provide roaming incentives to increase value perception")
+        # Only suggest if current probability is higher than target
+        if prob <= target_prob:
+            return ["Churn probability already low. No changes needed!"]
 
-    if suggestions:
-        for s in suggestions:
-            st.info(s)
-    else:
-        st.success("Customer attributes look good! Low churn risk factors detected.")
+        # Rules-based automatic suggestions
+        if current_df["CustServCalls"].iloc[0] > 2:
+            tweaks.append("Reduce Customer Service Calls")
+        if current_df["ContractRenewal"].iloc[0] == 0:
+            tweaks.append("Renew Contract")
+        if current_df["MonthlyCharge"].iloc[0] > 70:
+            tweaks.append("Lower Monthly Charge or offer discount")
+        if current_df["OverageFee"].iloc[0] > 20:
+            tweaks.append("Reduce Overage Fee")
+        if current_df["DataUsage"].iloc[0] < 5:
+            tweaks.append("Increase Data Plan usage")
+        if current_df["RoamMins"].iloc[0] < 10:
+            tweaks.append("Encourage more roaming usage")
+
+        # Advanced simulation: test incremental changes
+        simulated_changes = []
+        for f in ["CustServCalls", "MonthlyCharge", "OverageFee", "DataUsage", "RoamMins"]:
+            test_df = current_df.copy()
+            val = test_df[f].iloc[0]
+            if f in ["CustServCalls", "MonthlyCharge", "OverageFee"]:
+                new_val = max(val - step*val, 0)
+            else:
+                new_val = val + step*val
+            test_df[f] = new_val
+            new_prob = model.predict_proba(test_df)[:,1][0]
+            if new_prob < prob:
+                simulated_changes.append(f"- Adjust `{f}` from {val} → {round(new_val,2)} (probability drops {round(prob*100,1)}% → {round(new_prob*100,1)}%)")
+        
+        return tweaks + simulated_changes if simulated_changes else ["No further tweaks detected to reduce probability significantly."]
+
+    # Call the function
+    ai_suggestions = suggest_tweaks(model, input_df, features)
+
+    # Display AI suggestions
+    for s in ai_suggestions:
+        st.info(s)
