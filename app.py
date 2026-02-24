@@ -222,52 +222,30 @@ elif page == "Churn Prediction":
     else:
         st.success("Churn Risk Level: Low")
     
+
     # # SHAP explanation for Random Forest
     if model_option == "Random Forest":
-        st.subheader("Feature Contributions (SHAP Values)")
+        st.subheader("🔍 Feature Contributions (SHAP Values)")
 
-        explainer = shap.TreeExplainer(model.named_steps["rf"])
-        shap_values = explainer(input_df)  # returns shap.Explanation
+        rf_model = model.named_steps["rf"]
+        explainer = shap.TreeExplainer(rf_model)
+        shap_values = explainer(input_df)
 
-        # Get feature names from trained model
-        feature_names = model.named_steps["rf"].feature_names_in_
-
-        # Extract SHAP values for class 1 (customer churn)
+        # Flatten for class 1 (churn)
         if shap_values.values.ndim == 3:
-            shap_vals_row = shap_values.values[0,1,:]  # first row, class 1
+            shap_vals_row = shap_values.values[0,1,:]
         else:
             shap_vals_row = shap_values.values[0]
 
-        # Make sure lengths match
+        # Safety: make sure lengths match
+        feature_names = input_df.columns.tolist()
         if len(shap_vals_row) != len(feature_names):
             shap_vals_row = shap_vals_row[:len(feature_names)]
 
-        # Convert to DataFrame
+        # SHAP DataFrame
         shap_df = pd.DataFrame({
             "Feature": feature_names,
             "SHAP Value": shap_vals_row
         }).sort_values(by="SHAP Value", key=abs, ascending=False)
 
         st.bar_chart(shap_df.set_index("Feature"))
-    
-    # # SHAP explanation for Random Forest
-    # if model_option == "Random Forest":
-        # explainer = shap.TreeExplainer(model.named_steps["rf"])
-        # shap_values = explainer.shap_values(input_df)
-
-        # st.subheader("Feature Contributions (SHAP Values)")
-        # shap.initjs()
-
-        # # Handle both list or array return
-        # if isinstance(shap_values, list) and len(shap_values) == 2:
-        #     # Binary classification
-        #     shap_to_plot = shap_values[1]
-        #     expected_value = explainer.expected_value[1]
-        # else:
-        #     shap_to_plot = shap_values
-        #     expected_value = explainer.expected_value
-
-        # # Force plot with matplotlib=True
-        # st.pyplot(
-        #     shap.force_plot(expected_value, shap_to_plot, input_df, matplotlib=True)
-        # )
