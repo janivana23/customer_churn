@@ -214,11 +214,24 @@ elif page == "Churn Prediction":
         st.warning("Churn Risk Level: Medium")
     else:
         st.success("Churn Risk Level: Low")
+# SHAP explanation for Random Forest
+if model_option == "Random Forest":
+    explainer = shap.TreeExplainer(model.named_steps["rf"])
+    shap_values = explainer.shap_values(input_df)
 
-    # SHAP explanation for Random Forest
-    if model_option == "Random Forest":
-        explainer = shap.TreeExplainer(model.named_steps["rf"])
-        shap_values = explainer.shap_values(input_df)
-        st.subheader("Feature Contributions (SHAP Values)")
-        shap.initjs()
-        shap.force_plot(explainer.expected_value[1], shap_values[1], input_df, matplotlib=True)
+    st.subheader("Feature Contributions (SHAP Values)")
+    shap.initjs()
+
+    # Handle both list or array return
+    if isinstance(shap_values, list) and len(shap_values) == 2:
+        # Binary classification
+        shap_to_plot = shap_values[1]
+        expected_value = explainer.expected_value[1]
+    else:
+        shap_to_plot = shap_values
+        expected_value = explainer.expected_value
+
+    # Force plot with matplotlib=True
+    st.pyplot(
+        shap.force_plot(expected_value, shap_to_plot, input_df, matplotlib=True)
+    )
