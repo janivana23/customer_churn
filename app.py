@@ -222,21 +222,29 @@ elif page == "Churn Prediction":
     else:
         st.success("Churn Risk Level: Low")
     
-    # SHAP explanation for Random Forest (safe version)
+    # # SHAP explanation for Random Forest
     if model_option == "Random Forest":
         st.subheader("Feature Contributions (SHAP Values)")
 
         explainer = shap.TreeExplainer(model.named_steps["rf"])
-        shap_values = explainer(input_df)  # shap.Explanation object
+        shap_values = explainer(input_df)  # returns shap.Explanation
 
-        # Handle binary classification: take values for class 1
+        # Get feature names from trained model
+        feature_names = model.named_steps["rf"].feature_names_in_
+
+        # Extract SHAP values for class 1 (customer churn)
         if shap_values.values.ndim == 3:
-            shap_vals_row = shap_values.values[0,1,:]  # first sample, class 1, all features
+            shap_vals_row = shap_values.values[0,1,:]  # first row, class 1
         else:
-            shap_vals_row = shap_values.values[0]      # fallback for older versions
+            shap_vals_row = shap_values.values[0]
 
+        # Make sure lengths match
+        if len(shap_vals_row) != len(feature_names):
+            shap_vals_row = shap_vals_row[:len(feature_names)]
+
+        # Convert to DataFrame
         shap_df = pd.DataFrame({
-            "Feature": features,
+            "Feature": feature_names,
             "SHAP Value": shap_vals_row
         }).sort_values(by="SHAP Value", key=abs, ascending=False)
 
