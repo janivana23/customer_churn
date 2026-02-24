@@ -1,5 +1,5 @@
-## 📉 Telecom Customer Churn Prediction
-# Project Overview
+# 📉 Telecom Customer Churn Prediction
+## Project Overview
 
 This project demonstrates the use of machine learning to predict customer churn in the telecom industry.
 
@@ -15,7 +15,7 @@ Predictive modeling using Logistic Regression
 
 Interactive risk prediction via a Streamlit app
 
-Dataset
+## Dataset
 
 The dataset contains customer-level information from a telecom company, including account, usage, billing, and service interaction data. Each row represents a unique customer.
 
@@ -31,7 +31,8 @@ DayCalls	Average number of daytime calls
 MonthlyCharge	Average monthly bill
 OverageFee	Largest overage fee in the last 12 months
 RoamMins	Average roaming minutes per month
-Exploratory Data Analysis (EDA)
+
+## Exploratory Data Analysis (EDA)
 
 EDA focuses on identifying patterns that differentiate churned and retained customers:
 
@@ -43,7 +44,7 @@ Customers facing high monthly charges or overage fees are more likely to churn.
 
 Lower engagement metrics (e.g., DataUsage and RoamMins) indicate lower perceived value and higher churn risk.
 
-Modeling Approach
+## Modeling Approach
 
 The project uses Logistic Regression for churn prediction:
 
@@ -55,7 +56,7 @@ ROC-AUC is used to evaluate model performance.
 
 Model outputs probability of churn, enabling risk segmentation.
 
-Key Insights
+## Key Insights
 
 High service call frequency → indicates potential dissatisfaction.
 
@@ -65,7 +66,7 @@ High monthly charges or overage fees → contributes to churn.
 
 Lower usage levels → indicates customers may not perceive value.
 
-Business Recommendations
+## Business Recommendations
 
 Based on modeling results and feature insights, the following strategies can reduce churn:
 
@@ -79,7 +80,7 @@ Contract renewal incentives
 
 Monitoring usage patterns to identify disengaged customers early
 
-Streamlit Application
+## Streamlit Application
 
 An interactive Streamlit app demonstrates the project:
 
@@ -93,7 +94,7 @@ Simulate churn risk for individual customers
 
 The app provides an end-to-end demonstration of data-driven decision support in a telecom business context.
 
-Project Structure
+## Project Structure
 customer_churn/
 │
 ├── app.py               # Streamlit application
@@ -119,19 +120,21 @@ Install dependencies:
 
 pip install -r requirements.txt
 
-How to Run the App
+## How to Run the App
 
-Clone the repository
+1. Clone the repository
 
-Install dependencies (pip install -r requirements.txt)
+2. Install dependencies (pip install -r requirements.txt)
 
-Run the Streamlit app:
+3. Run the Streamlit app:
 
-streamlit run app.py
+    streamlit run app.py
 
-Use the sidebar to navigate between Dataset Overview, EDA, Model Training, and Churn Prediction.
+4. Use the sidebar to navigate between Dataset Overview, EDA, Model Training, and Churn Prediction.
 
-Author
+5. Website: https://fintech-app.streamlit.app/
+
+## Author
 
 Janice Ivana – Designed, coded, and deployed the full Telecom Customer Churn Prediction workflow, including data preprocessing, modeling, and interactive deployment.
 Website version: https://fintech-app.streamlit.app/
