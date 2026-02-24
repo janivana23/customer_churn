@@ -10,7 +10,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.pipeline import make_pipeline
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import roc_auc_score, confusion_matrix, ConfusionMatrixDisplay
 
@@ -70,8 +69,6 @@ def get_trained_model(model_option, use_poly=False):
         X, y, test_size=0.25, random_state=42, stratify=y
     )
     
-    scaler = StandardScaler()
-    
     if model_option == "Logistic Regression":
         if use_poly:
             pipeline = Pipeline([
@@ -85,9 +82,15 @@ def get_trained_model(model_option, use_poly=False):
                 ('lr', LogisticRegression(max_iter=2000, class_weight="balanced"))
             ])
         pipeline.fit(X_train, y_train)
-        return pipeline, X_train, X_test, y_train, y_test
+    else:
+        pipeline = Pipeline([
+            ('rf', RandomForestClassifier(n_estimators=200, random_state=42))
+        ])
+        pipeline.fit(X_train, y_train)
+    
+    return pipeline, X_train, X_test, y_train, y_test
 
-model, X_train, X_test, y_train, y_test, scaler, poly = get_trained_model(model_option, use_poly)
+model, X_train, X_test, y_train, y_test = get_trained_model(model_option, use_poly)
 
 # ---------------------------
 # ABOUT PAGE
@@ -152,18 +155,8 @@ elif page == "EDA":
 elif page == "Modeling":
     st.title("🤖 Model Training & Evaluation")
     
-    # Predictions
-    if model_option == "Logistic Regression":
-        if use_poly and poly:
-            X_test_scaled = scaler.transform(X_test)
-            X_test_scaled = poly.transform(X_test_scaled)
-            y_pred_prob = model.predict_proba(X_test_scaled)[:,1]
-        else:
-            X_test_scaled = scaler.transform(X_test)
-            y_pred_prob = model.predict_proba(X_test)[:,1]
-    else:
-        y_pred_prob = model.predict_proba(X_test)[:,1]
-    
+    # Predict probabilities
+    y_pred_prob = model.predict_proba(X_test)[:,1]
     roc_auc = roc_auc_score(y_test, y_pred_prob)
     st.success(f"ROC-AUC Score: {roc_auc:.3f}")
     
@@ -179,7 +172,7 @@ elif page == "Modeling":
     # Feature importance for Random Forest
     if model_option == "Random Forest":
         st.subheader("Feature Importance")
-        rf_model = model.named_steps["randomforestclassifier"]
+        rf_model = model.named_steps["rf"]
         importance = pd.DataFrame({
             "Feature": features,
             "Importance": rf_model.feature_importances_
@@ -210,13 +203,7 @@ elif page == "Churn Prediction":
     if st.button("Predict Churn"):
         input_df = pd.DataFrame([input_data])
         
-        if model_option == "Logistic Regression":
-            input_scaled = scaler.transform(input_df)
-            if use_poly and poly:
-                input_scaled = poly.transform(input_scaled)
-            prob = model.predict_proba(input_scaled)[:,1][0]
-        else:
-            prob = model.predict_proba(input_df)[:,1][0]
+        prob = model.predict_proba(input_df)[:,1][0]
         
         st.subheader(f"Predicted Churn Probability: {prob:.2%}")
         
@@ -231,7 +218,7 @@ elif page == "Churn Prediction":
         
         # SHAP explanation (only for Random Forest)
         if model_option == "Random Forest":
-            explainer = shap.TreeExplainer(model.named_steps["randomforestclassifier"])
+            explainer = shap.TreeExplainer(model.named_steps["rf"])
             shap_values = explainer.shap_values(input_df)
             st.subheader("Feature Contributions (SHAP Values)")
             shap.initjs()
