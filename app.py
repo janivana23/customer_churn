@@ -167,7 +167,7 @@ elif page == "Churn Prediction":
     
     if st.button("Predict Churn"):
         input_df = pd.DataFrame([input_data])
-        if   == "Logistic Regression":
+        if model_option == "Logistic Regression":
             input_scaled = scaler.transform(input_df)
             prob = model.predict_proba(input_scaled)[:,1][0]
         else:
