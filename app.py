@@ -11,6 +11,7 @@ from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import make_pipeline
+from sklearn.pipeline import Pipeline
 from sklearn.metrics import roc_auc_score, confusion_matrix, ConfusionMatrixDisplay
 
 import shap
@@ -73,20 +74,18 @@ def get_trained_model(model_option, use_poly=False):
     
     if model_option == "Logistic Regression":
         if use_poly:
-            poly = PolynomialFeatures(degree=2, interaction_only=True, include_bias=False)
-            X_train_poly = poly.fit_transform(X_train)
-            X_test_poly = poly.transform(X_test)
-            pipeline = make_pipeline(scaler, LogisticRegression(max_iter=2000, class_weight="balanced"))
-            pipeline.fit(X_train_poly, y_train)
-            return pipeline, X_train_poly, X_test_poly, y_train, y_test, scaler, poly
+            pipeline = Pipeline([
+                ('poly', PolynomialFeatures(degree=2, interaction_only=True, include_bias=False)),
+                ('scaler', StandardScaler()),
+                ('lr', LogisticRegression(max_iter=2000, class_weight="balanced"))
+            ])
         else:
-            pipeline = make_pipeline(scaler, LogisticRegression(max_iter=2000, class_weight="balanced"))
-            pipeline.fit(X_train, y_train)
-            return pipeline, X_train, X_test, y_train, y_test, scaler, None
-    else:  # Random Forest
-        pipeline = make_pipeline(RandomForestClassifier(n_estimators=200, random_state=42))
+            pipeline = Pipeline([
+                ('scaler', StandardScaler()),
+                ('lr', LogisticRegression(max_iter=2000, class_weight="balanced"))
+            ])
         pipeline.fit(X_train, y_train)
-        return pipeline, X_train, X_test, y_train, y_test, scaler, None
+        return pipeline, X_train, X_test, y_train, y_test
 
 model, X_train, X_test, y_train, y_test, scaler, poly = get_trained_model(model_option, use_poly)
 
@@ -161,7 +160,7 @@ elif page == "Modeling":
             y_pred_prob = model.predict_proba(X_test_scaled)[:,1]
         else:
             X_test_scaled = scaler.transform(X_test)
-            y_pred_prob = model.predict_proba(X_test_scaled)[:,1]
+            y_pred_prob = model.predict_proba(X_test)[:,1]
     else:
         y_pred_prob = model.predict_proba(X_test)[:,1]
     
