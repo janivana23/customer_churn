@@ -222,19 +222,24 @@ elif page == "Churn Prediction":
     else:
         st.success("Churn Risk Level: Low")
     
-    # SHAP explanation for Random Forest (works reliably)
+    # SHAP explanation for Random Forest (safe version)
     if model_option == "Random Forest":
         st.subheader("Feature Contributions (SHAP Values)")
-        
+
         explainer = shap.TreeExplainer(model.named_steps["rf"])
-        shap_values = explainer(input_df)  # returns shap.Explanation
-        
-        # Convert SHAP values to DataFrame for plotting
+        shap_values = explainer(input_df)  # shap.Explanation object
+
+        # Handle binary classification: take values for class 1
+        if shap_values.values.ndim == 3:
+            shap_vals_row = shap_values.values[0,1,:]  # first sample, class 1, all features
+        else:
+            shap_vals_row = shap_values.values[0]      # fallback for older versions
+
         shap_df = pd.DataFrame({
             "Feature": features,
-            "SHAP Value": shap_values.values[0]  # first row only
+            "SHAP Value": shap_vals_row
         }).sort_values(by="SHAP Value", key=abs, ascending=False)
-        
+
         st.bar_chart(shap_df.set_index("Feature"))
     
     # # SHAP explanation for Random Forest
