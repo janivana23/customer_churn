@@ -57,6 +57,20 @@ The project uses Logistic Regression for churn prediction:
 - High monthly charges or overage fees → contributes to churn.
 - Lower usage levels → indicates customers may not perceive value.
 
+## 🤖 AI What-If Scenario
+
+This app includes an **AI-powered What-If feature** that simulates changes in customer behavior to reduce churn risk. 
+
+- **Interactive Simulation:** Adjust customer attributes using sliders and immediately see how churn probability changes.  
+- **Actionable Recommendations:** The app automatically suggests minimal adjustments that could lower the risk, such as:
+  - Reducing the number of customer service calls  
+  - Renewing a contract if not already renewed  
+  - Optimizing monthly charges or overage fees  
+  - Increasing engagement metrics like data usage or roaming minutes  
+- **Dynamic Feedback:** The AI provides real-time probability updates and practical insights to help decision-making.  
+
+This feature demonstrates how predictive analytics can guide customer retention strategies in a telecom context, offering **data-driven, actionable recommendations** beyond just churn prediction.
+
 ## Business Recommendations
 
 Based on modeling results and feature insights, the following strategies can reduce churn:
