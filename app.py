@@ -180,46 +180,45 @@ elif page == "Modeling":
         st.bar_chart(importance.set_index("Feature"))
 
 # ---------------------------
-# CHURN PREDICTION PAGE
+# CHURN PREDICTION PAGE (Live Simulator)
 # ---------------------------
 elif page == "Churn Prediction":
-    st.title("📌 Predict Churn for Individual Customers")
-    
-    st.markdown("Enter customer data below:")
-    
-    # Input widgets
-    input_data = {}
-    input_data["AccountWeeks"] = st.number_input("Account Weeks", min_value=0, max_value=1000, value=52)
-    input_data["ContractRenewal"] = st.selectbox("Contract Renewal", [0,1])
-    input_data["DataPlan"] = st.selectbox("Data Plan", [0,1])
-    input_data["DataUsage"] = st.number_input("Monthly Data Usage (GB)", min_value=0.0, max_value=200.0, value=10.0)
-    input_data["CustServCalls"] = st.number_input("Customer Service Calls", min_value=0, max_value=50, value=1)
-    input_data["DayMins"] = st.number_input("Average Daytime Minutes", min_value=0.0, max_value=2000.0, value=200.0)
-    input_data["DayCalls"] = st.number_input("Average Daytime Calls", min_value=0, max_value=500, value=50)
-    input_data["MonthlyCharge"] = st.number_input("Monthly Charge ($)", min_value=0.0, max_value=1000.0, value=50.0)
-    input_data["OverageFee"] = st.number_input("Largest Overage Fee ($)", min_value=0.0, max_value=500.0, value=0.0)
-    input_data["RoamMins"] = st.number_input("Average Roaming Minutes", min_value=0.0, max_value=500.0, value=10.0)
-    
-    if st.button("Predict Churn"):
-        input_df = pd.DataFrame([input_data])
-        
-        prob = model.predict_proba(input_df)[:,1][0]
-        
-        st.subheader(f"Predicted Churn Probability: {prob:.2%}")
-        
-        # Risk category
-        if prob >= 0.7:
-            risk = "High"
-        elif prob >= 0.4:
-            risk = "Medium"
-        else:
-            risk = "Low"
-        st.info(f"Churn Risk Level: {risk}")
-        
-        # SHAP explanation (only for Random Forest)
-        if model_option == "Random Forest":
-            explainer = shap.TreeExplainer(model.named_steps["rf"])
-            shap_values = explainer.shap_values(input_df)
-            st.subheader("Feature Contributions (SHAP Values)")
-            shap.initjs()
-            shap.force_plot(explainer.expected_value[1], shap_values[1], input_df, matplotlib=True)
+    st.title("📌 Predict Churn for Individual Customers (Live Simulator)")
+    st.markdown("Adjust the customer attributes using sliders and see how churn probability changes in real-time.")
+
+    # Sliders / inputs
+    input_data = {
+        "AccountWeeks": st.slider("Account Weeks", 0, 1000, 52),
+        "ContractRenewal": st.select_slider("Contract Renewal", options=[0,1], value=1),
+        "DataPlan": st.select_slider("Data Plan", options=[0,1], value=1),
+        "DataUsage": st.slider("Monthly Data Usage (GB)", 0.0, 200.0, 10.0),
+        "CustServCalls": st.slider("Customer Service Calls", 0, 50, 1),
+        "DayMins": st.slider("Average Daytime Minutes", 0.0, 2000.0, 200.0),
+        "DayCalls": st.slider("Average Daytime Calls", 0, 500, 50),
+        "MonthlyCharge": st.slider("Monthly Charge ($)", 0.0, 1000.0, 50.0),
+        "OverageFee": st.slider("Largest Overage Fee ($)", 0.0, 500.0, 0.0),
+        "RoamMins": st.slider("Average Roaming Minutes", 0.0, 500.0, 10.0)
+    }
+
+    # Convert to DataFrame
+    input_df = pd.DataFrame([input_data])
+
+    # Predict churn probability
+    prob = model.predict_proba(input_df)[:,1][0]
+    st.subheader(f"Predicted Churn Probability: {prob:.2%}")
+
+    # Risk category
+    if prob >= 0.7:
+        st.error("Churn Risk Level: High")
+    elif prob >= 0.4:
+        st.warning("Churn Risk Level: Medium")
+    else:
+        st.success("Churn Risk Level: Low")
+
+    # SHAP explanation for Random Forest
+    if model_option == "Random Forest":
+        explainer = shap.TreeExplainer(model.named_steps["rf"])
+        shap_values = explainer.shap_values(input_df)
+        st.subheader("Feature Contributions (SHAP Values)")
+        shap.initjs()
+        shap.force_plot(explainer.expected_value[1], shap_values[1], input_df, matplotlib=True)
