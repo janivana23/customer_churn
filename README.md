@@ -1,5 +1,5 @@
-📉 Telecom Customer Churn Prediction
-Project Overview
+## 📉 Telecom Customer Churn Prediction
+# Project Overview
 
 This project demonstrates the use of machine learning to predict customer churn in the telecom industry.
 
