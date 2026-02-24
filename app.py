@@ -14,13 +14,6 @@ from sklearn.pipeline import Pipeline
 from sklearn.metrics import roc_auc_score, confusion_matrix, ConfusionMatrixDisplay
 
 import shap
-# Helper to render SHAP JS plots in Streamlit
-import streamlit.components.v1 as components
-
-def st_shap(plot, height=None):
-    """Renders a SHAP plot in Streamlit."""
-    shap_html = f"<head>{shap.getjs()}</head><body>{plot.html()}</body>"
-    components.html(shap_html, height=height or 400)
 
 # ---------------------------
 # Page Configuration
@@ -187,7 +180,7 @@ elif page == "Modeling":
         st.bar_chart(importance.set_index("Feature"))
 
 # ---------------------------
-# CHURN PREDICTION PAGE (Live Simulator)
+# CHURN PREDICTION PAGE (Live Simulator + SHAP)
 # ---------------------------
 elif page == "Churn Prediction":
     st.title("📌 Predict Churn for Individual Customers (Live Simulator)")
@@ -221,9 +214,10 @@ elif page == "Churn Prediction":
         st.warning("Churn Risk Level: Medium")
     else:
         st.success("Churn Risk Level: Low")
-    
 
-    # # SHAP explanation for Random Forest
+    # ---------------------------
+    # SHAP Explanation (Random Forest only)
+    # ---------------------------
     if model_option == "Random Forest":
         st.subheader("🔍 Feature Contributions (SHAP Values)")
 
