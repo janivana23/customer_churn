@@ -222,20 +222,20 @@ elif page == "Churn Prediction":
     else:
         st.success("Churn Risk Level: Low")
     
-        # SHAP explanation for Random Forest
+    # SHAP explanation for Random Forest (works reliably)
     if model_option == "Random Forest":
         st.subheader("Feature Contributions (SHAP Values)")
         
         explainer = shap.TreeExplainer(model.named_steps["rf"])
-        shap_values = explainer(input_df)  # returns a shap.Explanation object
-
-        # Use waterfall for single row
-        shap_row = shap_values[0]  # first (and only) row
-
-        # Display waterfall plot with st.pyplot
-        fig, ax = plt.subplots(figsize=(10,5))
-        shap.plots.waterfall(shap_row, show=False)
-        st.pyplot(fig)
+        shap_values = explainer(input_df)  # returns shap.Explanation
+        
+        # Convert SHAP values to DataFrame for plotting
+        shap_df = pd.DataFrame({
+            "Feature": features,
+            "SHAP Value": shap_values.values[0]  # first row only
+        }).sort_values(by="SHAP Value", key=abs, ascending=False)
+        
+        st.bar_chart(shap_df.set_index("Feature"))
     
     # # SHAP explanation for Random Forest
     # if model_option == "Random Forest":
