@@ -5,41 +5,55 @@ import joblib
 import os
 
 from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
-from sklearn.pipeline import Pipeline
 from sklearn.metrics import roc_auc_score
 
 # --------------------------------------------------
-# App Config
+# Application Configuration
 # --------------------------------------------------
 st.set_page_config(
-    page_title="FinTech Customer Churn Prediction",
+    page_title="Telecom Customer Churn Prediction",
     layout="wide"
 )
 
-st.title("📉 FinTech Customer Churn Prediction")
-st.write(
-    "This application predicts customer churn using behavioral, usage, "
-    "and billing data from a subscription-based FinTech service."
+st.title("📉 Telecom Customer Churn Prediction")
+st.markdown(
+    """
+    This application predicts **customer churn** in a telecom context using
+    customer tenure, usage behavior, billing information, and service interaction data.
+
+    The goal is to identify **customers at risk of leaving** and support
+    data-driven retention strategies.
+    """
 )
 
 # --------------------------------------------------
-# Load Data
+# Load Dataset
 # --------------------------------------------------
 @st.cache_data
 def load_data():
+    """
+    Load the telecom churn dataset.
+    Caching is used to improve app performance.
+    """
     return pd.read_csv("data/churn.csv")
 
 df = load_data()
 
 # --------------------------------------------------
-# Sidebar
+# Sidebar Navigation
 # --------------------------------------------------
 st.sidebar.header("Navigation")
 page = st.sidebar.radio(
-    "Go to",
-    ["Dataset Overview", "EDA", "Train Model", "Churn Prediction"]
+    "Select Section",
+    [
+        "Dataset Overview",
+        "Exploratory Data Analysis",
+        "Model Training",
+        "Churn Risk Prediction"
+    ]
 )
 
 # --------------------------------------------------
@@ -49,85 +63,108 @@ if page == "Dataset Overview":
     st.subheader("Dataset Preview")
     st.dataframe(df.head())
 
-    st.subheader("Dataset Summary")
+    st.subheader("Dataset Statistics")
     st.write(df.describe())
 
     churn_rate = df["Churn"].mean() * 100
-    st.metric("Overall Churn Rate (%)", f"{churn_rate:.2f}")
+    st.metric("Overall Churn Rate", f"{churn_rate:.2f}%")
 
 # --------------------------------------------------
-# EDA
+# Exploratory Data Analysis
 # --------------------------------------------------
-elif page == "EDA":
+elif page == "Exploratory Data Analysis":
     st.subheader("Exploratory Data Analysis")
 
     col1, col2 = st.columns(2)
 
     with col1:
-        st.write("### Churn Distribution")
+        st.markdown("### Churn Distribution")
         st.bar_chart(df["Churn"].value_counts())
 
     with col2:
-        st.write("### Customer Service Calls vs Churn")
+        st.markdown("### Average Customer Service Calls by Churn")
         st.bar_chart(df.groupby("Churn")["CustServCalls"].mean())
 
-    st.write("### Average Charges by Churn Status")
+    st.markdown("### Average Monthly Charge by Churn Status")
     st.bar_chart(df.groupby("Churn")["MonthlyCharge"].mean())
 
+    st.info(
+        "Customers who churn tend to have **higher service call frequency** "
+        "and **higher billing exposure**, indicating dissatisfaction and pricing friction."
+    )
+
 # --------------------------------------------------
-# Train Model
+# Model Training
 # --------------------------------------------------
-elif page == "Train Model":
+elif page == "Model Training":
     st.subheader("Model Training")
 
-    features = [
-        "AccountWeeks", "ContractRenewal", "DataPlan",
-        "DataUsage", "CustServCalls", "DayMins",
-        "DayCalls", "MonthlyCharge", "OverageFee", "RoamMins"
+    # Feature selection based on business relevance
+    feature_columns = [
+        "AccountWeeks",
+        "ContractRenewal",
+        "DataPlan",
+        "DataUsage",
+        "CustServCalls",
+        "DayMins",
+        "DayCalls",
+        "MonthlyCharge",
+        "OverageFee",
+        "RoamMins"
     ]
 
-    X = df[features]
+    X = df[feature_columns]
     y = df["Churn"]
 
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.25, random_state=42, stratify=y
+        X,
+        y,
+        test_size=0.25,
+        random_state=42,
+        stratify=y
     )
 
-    pipeline = Pipeline([
+    # Pipeline ensures consistent preprocessing and prediction
+    churn_pipeline = Pipeline([
         ("scaler", StandardScaler()),
         ("model", LogisticRegression(max_iter=1000))
     ])
 
-    if st.button("Train Churn Model"):
-        pipeline.fit(X_train, y_train)
+    if st.button("Train Model"):
+        churn_pipeline.fit(X_train, y_train)
 
-        y_prob = pipeline.predict_proba(X_test)[:, 1]
-        auc = roc_auc_score(y_test, y_prob)
+        y_pred_prob = churn_pipeline.predict_proba(X_test)[:, 1]
+        roc_auc = roc_auc_score(y_test, y_pred_prob)
 
-        joblib.dump(pipeline, "churn_model.pkl")
+        joblib.dump(churn_pipeline, "churn_model.pkl")
 
-        st.success("Model trained and saved successfully!")
-        st.metric("ROC-AUC Score", f"{auc:.3f}")
+        st.success("Model trained and saved successfully.")
+        st.metric("ROC-AUC Score", f"{roc_auc:.3f}")
+
+        st.caption(
+            "ROC-AUC is used to evaluate how well the model ranks churn risk, "
+            "which is more informative than accuracy for imbalanced datasets."
+        )
 
 # --------------------------------------------------
-# Churn Prediction
+# Churn Risk Prediction
 # --------------------------------------------------
-elif page == "Churn Prediction":
-    st.subheader("Predict Customer Churn")
+elif page == "Churn Risk Prediction":
+    st.subheader("Predict Customer Churn Risk")
 
     if not os.path.exists("churn_model.pkl"):
-        st.warning("Please train the model first.")
+        st.warning("Please train the model before making predictions.")
     else:
         model = joblib.load("churn_model.pkl")
 
         col1, col2 = st.columns(2)
 
         with col1:
-            account_weeks = st.number_input("Account Weeks", 0, 1000, 100)
+            account_weeks = st.number_input("Account Tenure (Weeks)", 0, 1000, 100)
             contract_renewal = st.selectbox("Contract Renewal", [0, 1])
             data_plan = st.selectbox("Data Plan", [0, 1])
             data_usage = st.number_input("Monthly Data Usage (GB)", 0.0, 100.0, 5.0)
-            cust_calls = st.number_input("Customer Service Calls", 0, 20, 1)
+            cust_serv_calls = st.number_input("Customer Service Calls", 0, 20, 1)
 
         with col2:
             day_mins = st.number_input("Daytime Minutes", 0.0, 1000.0, 300.0)
@@ -136,22 +173,36 @@ elif page == "Churn Prediction":
             overage_fee = st.number_input("Overage Fee", 0.0, 500.0, 0.0)
             roam_mins = st.number_input("Roaming Minutes", 0.0, 500.0, 10.0)
 
-        if st.button("Predict Churn Risk"):
-            input_data = pd.DataFrame([[
-                account_weeks, contract_renewal, data_plan,
-                data_usage, cust_calls, day_mins,
-                day_calls, monthly_charge, overage_fee, roam_mins
+        if st.button("Predict Churn"):
+            input_df = pd.DataFrame([[
+                account_weeks,
+                contract_renewal,
+                data_plan,
+                data_usage,
+                cust_serv_calls,
+                day_mins,
+                day_calls,
+                monthly_charge,
+                overage_fee,
+                roam_mins
             ]], columns=[
-                "AccountWeeks", "ContractRenewal", "DataPlan",
-                "DataUsage", "CustServCalls", "DayMins",
-                "DayCalls", "MonthlyCharge", "OverageFee", "RoamMins"
+                "AccountWeeks",
+                "ContractRenewal",
+                "DataPlan",
+                "DataUsage",
+                "CustServCalls",
+                "DayMins",
+                "DayCalls",
+                "MonthlyCharge",
+                "OverageFee",
+                "RoamMins"
             ])
 
-            churn_prob = model.predict_proba(input_data)[0][1]
+            churn_probability = model.predict_proba(input_df)[0][1]
 
-            if churn_prob >= 0.7:
-                st.error(f"High Churn Risk 🔴 ({churn_prob:.2%})")
-            elif churn_prob >= 0.4:
-                st.warning(f"Medium Churn Risk 🟠 ({churn_prob:.2%})")
+            if churn_probability >= 0.70:
+                st.error(f"High Churn Risk 🔴 ({churn_probability:.2%})")
+            elif churn_probability >= 0.40:
+                st.warning(f"Medium Churn Risk 🟠 ({churn_probability:.2%})")
             else:
-                st.success(f"Low Churn Risk 🟢 ({churn_prob:.2%})")
+                st.success(f"Low Churn Risk 🟢 ({churn_probability:.2%})")
