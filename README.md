@@ -82,7 +82,7 @@ The app provides an end-to-end demonstration of data-driven decision support in 
 customer_churn/
 - app.py               # Streamlit application
 - data/
--  - churn.csv        # Telecom customer dataset
+  - churn.csv        # Telecom customer dataset
 - requirements.txt     # Python dependencies
 - README.md            # Project documentation
 
